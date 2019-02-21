@@ -21,6 +21,18 @@
 import sys, os;
 import argparse;
 
+class cd:
+    """Context manager for changing the current working directory"""
+    def __init__(self, newPath):
+        self.newPath = os.path.expanduser(newPath)
+
+    def __enter__(self):
+        self.savedPath = os.getcwd()
+        os.chdir(self.newPath)
+
+    def __exit__(self, etype, value, traceback):
+        os.chdir(self.savedPath)
+
 class DefaultHelpParser(argparse.ArgumentParser):
     def error(self, message):
         sys.stderr.write('error: %s\n' % message)
@@ -38,6 +50,22 @@ def check_dir(name, create = False):
             return False;
 
 def reverse_mappings(folder_in, folder_out):
+    walked = None;
+    
+    walked = os.walk(folder_in);
+    
+    for root, dirs, files in walked:
+        if (root != folder_in):
+            without_in = os.path.join(*(root.split(os.path.sep)[1:]));
+        else:
+            without_in = "";
+        
+        for file in files:
+            mapping = os.path.join(without_in, file);
+            if (mapping.endswith(".mapping")):
+                reverse_mapping(folder_in, folder_out, mapping);
+
+def reverse_mapping(floder_in, folder_out, file):
     pass;
 
 def main():
@@ -48,6 +76,8 @@ def main():
     
     assert check_dir(args["in"]), "Input folder doesn't exist, aborting!";
     assert check_dir(args["out"], True), "Can't create output folder, aborting!";
+
+    reverse_mappings(args["in"], args["out"]);
 
 if __name__ == "__main__":
    main();
