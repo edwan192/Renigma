@@ -49,6 +49,14 @@ def check_dir(name, create = False):
         else:
             return False;
 
+def create_parents_dirs(filename):
+    if not os.path.exists(os.path.dirname(filename)):
+        try:
+            os.makedirs(os.path.dirname(filename))
+        except OSError as exc: # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
+
 def reverse_mappings(folder_in, folder_out):
     walked = None;
     
@@ -65,8 +73,51 @@ def reverse_mappings(folder_in, folder_out):
             if (mapping.endswith(".mapping")):
                 reverse_mapping(folder_in, folder_out, mapping);
 
-def reverse_mapping(floder_in, folder_out, file):
-    pass;
+def reverse_mapping(folder_in, folder_out, file):
+    create_parents_dirs(os.path.join(folder_out, file));
+    
+    with open(os.path.join(folder_in,  file), mode='r', encoding='UTF-8') as in_file, \
+         open(os.path.join(folder_out, file), mode='w', encoding='UTF-8') as out_file:
+        data = in_file.read();
+        for line in data.splitlines():
+            rline = reverse_line(line);
+            print(rline, file=out_file);
+
+def handle_class(line):
+    line[1], line[2] = line[2], line[1];
+    return line;
+
+def handle_field(line):
+    line[1], line[2] = line[2], line[1];
+    return line;
+
+def handle_method(line):
+    if (len(line) == 3):
+        return line;
+    line[1], line[2] = line[2], line[1];
+    return line;
+
+def handle_arg(line):
+    return line;
+
+handlers = {
+    "CLASS":  handle_class,
+    "FIELD":  handle_field,
+    "METHOD": handle_method,
+    "ARG":    handle_arg,
+};
+
+def reverse_line(line):
+    tabs = len(line) - len(line.lstrip('\t'));
+    line = line.lstrip('\t');
+    line = line.split(" ");
+    
+    assert line[0] in handlers, "No handler for type " + line[0] + ", aborting!";
+    
+    new_line = handlers[line[0]](line);
+    new_line = ' '.join(new_line);
+    new_line = ('\t' * tabs) + new_line;
+    return new_line;
 
 def main():
     parser = DefaultHelpParser(description='Reverses enigma mappings, to use them to reobfurscate code.');
